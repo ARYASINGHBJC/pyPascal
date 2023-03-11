@@ -1,5 +1,5 @@
 # EOF(end-of-file) token is used to indicate that there is no more inputleft for lexical analysis
-INTEGER, PLUS, MINUS, EOF = 'INTEGER', 'PLUS', 'MINUS', 'EOF'
+INTEGER, PLUS, MINUS, PROD, DIV, EOF = 'INTEGER', 'PLUS', 'MINUS', 'PROD', 'DIV', 'EOF'
 
 
 class Token():
@@ -44,6 +44,7 @@ class Interpreter:
             self.current_char = self.text[self.pos]
 
     def whitespace_check(self):
+        """Skips whitespace characters"""
         while self.current_char is not None and self.current_char.isspace():
             self.advance_forward()
 
@@ -61,32 +62,26 @@ class Interpreter:
             This method is reponsible for breaking a sentence apart 
             into tokens. One taken at a time
         """
-        text = self.text
-        # if self.pos index past the end of the self.text
-        # return EOF token because there is no more input left to convert into tokens
-        if self.pos > len(text) - 1:
-            return Token(EOF, None)
-
-        # get a character using self.pos and
-        # decide what token to create based on single character
-
-        current_char = text[self.pos]
-
-        # if the character is digit then convert it into an integer
-        # create an integer token, increment self.pos to point to the next character
-        # and return the integer token
-
-        if current_char.isdigit():
-            token = Token(INTEGER, int(current_char))
-            self.pos += 1
-            return token
-
-        if current_char == '+':
-            token = Token(PLUS, current_char)
-            self.pos += 1
-            return token
-
-        self.error()
+        while self.current_char is not None:
+            if self.current_char.isspace():
+                self.whitespace_check()
+                continue
+            if self.current_char.isdigit():
+                return Token(INTEGER, self.integer())
+            if self.current_char == "+":
+                self.advance_forward()
+                return Token(PLUS, '+')
+            if self.current_char == '-':
+                self.advance_forward()
+                return Token(MINUS, '-')
+            if self.current_char == '*':
+                self.advance_forward()
+                return Token(PROD, '*')
+            if self.current_char == '/':
+                self.advance_forward()
+                return Token(DIV, '/')
+            self.error()
+        return Token(EOF, None)
 
     def process_token(self, token_type):
         # compare the current token type with the passed token type
@@ -98,7 +93,12 @@ class Interpreter:
             self.error()
 
     def expr(self):
-        """ expression -> INTEGER PLUS IM=NTEGER"""
+        """
+          expression -> INTEGER PLUS INTEGER
+          expression -> INTEGER MINUS INTEGER
+          expression -> INTEGER PROD INTEGER
+          expression -> INTEGER DIV INTEGER
+        """
         # set current tokem to the first token taken from the input
         self.current_token = self.get_next_token()
 
@@ -108,17 +108,35 @@ class Interpreter:
 
         # we except the current token to be a '+' token
         operator = self.current_token
-        self.process_token(PLUS)
+        if operator.type == PLUS:
+            self.process_token(PLUS)
+        elif operator.type == MINUS:
+            self.process_token(MINUS)
+        elif operator.type == PROD:
+            self.process_token(PROD)
+        else:
+            self.process_token(DIV)
 
         # We except the current token to be a single-digit integer
-        right_operator = self.current_token
+        right_operand = self.current_token
         self.process_token(INTEGER)
 
         # after these above call the self.current_token is set to EOF token
 
-        # INTEGER PLUS INTEGER sequence of tokens has been processed
-        # method can just now return the result of addition of two number
-        res = left_operand.value + right_operator.value
+        # INTEGER OPERAND INTEGER sequence of tokens has been processed
+        # method can just now return the result of operation between two integers
+
+        if operator.type == PLUS:
+            res = left_operand.value + right_operand.value
+        elif operator.type == MINUS:
+            res = left_operand.value - right_operand.value
+        elif operator.type == PROD:
+            res = left_operand.value * right_operand.value
+        else:
+            if right_operand.value == 0:
+                raise ZeroDivisionError
+            else:
+                res = left_operand.value / right_operand.value
         return res
 
 
