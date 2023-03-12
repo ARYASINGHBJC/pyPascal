@@ -21,10 +21,14 @@ class Token():
     def __repr__(self):
         return self.__str__()
 
+    ###################################
+    #              Lexer              #
+    ###################################
 
-class Interpreter:
+
+class Lexer:
     def __init__(self, text):
-        # User string input, e.g. "5+ 4"
+        # User string input, e.g. "5+ 4", "10-5+22", etc
         self.text = text
         # self.pos is an index for self.text
         self.pos = 0
@@ -33,17 +37,17 @@ class Interpreter:
         self.current_char = self.text[self.pos]
 
     def error(self):
-        raise Exception('Error parsing input')
+        raise Exception('Invalid character')
 
     def advance_forward(self):
         """Advance the `pos` pointer and set the `current_char` variable."""
         self.pos += 1
         if self.pos > len(self.text) - 1:
-            self.current_char = None
+            self.current_char = None  # Indicates end of input
         else:
             self.current_char = self.text[self.pos]
 
-    def whitespace_check(self):
+    def skip(self):
         """Skips whitespace characters"""
         while self.current_char is not None and self.current_char.isspace():
             self.advance_forward()
@@ -64,7 +68,7 @@ class Interpreter:
         """
         while self.current_char is not None:
             if self.current_char.isspace():
-                self.whitespace_check()
+                self.skip()
                 continue
             if self.current_char.isdigit():
                 return Token(INTEGER, self.integer())
@@ -83,14 +87,37 @@ class Interpreter:
             self.error()
         return Token(EOF, None)
 
+    ###################################
+    #       Parser/Interpreter        #
+    ###################################
+
+
+class Interpreter:
+    def __init__(self, lexer):
+        self.lexer = lexer
+        # set current token to the first token from the input
+        self.current_token = self.lexer.get_next_token()
+
+    def error(self):
+        raise Exception('Invalid Syntax')
+
     def process_token(self, token_type):
         # compare the current token type with the passed token type
         # if they match then 'processs' the current token
         # assign the next token to the self.current_token else raise an exception
         if self.current_token.type == token_type:
-            self.current_token = self.get_next_token()
+            self.current_token = self.lexer.get_next_token()
         else:
             self.error()
+
+    def factor(self):
+        """
+        Return an INTEGER token value
+        factor -> Integer
+        """
+        token = self.current_token
+        self.process_token(INTEGER)
+        return token.value
 
     def expr(self):
         """
@@ -99,44 +126,21 @@ class Interpreter:
           expression -> INTEGER PROD INTEGER
           expression -> INTEGER DIV INTEGER
         """
-        # set current tokem to the first token taken from the input
-        self.current_token = self.get_next_token()
-
-        # We except the current token to be a single-digit integer
-        left_operand = self.current_token
-        self.process_token(INTEGER)
-
-        # we except the current token to be a '+' token
-        operator = self.current_token
-        if operator.type == PLUS:
-            self.process_token(PLUS)
-        elif operator.type == MINUS:
-            self.process_token(MINUS)
-        elif operator.type == PROD:
-            self.process_token(PROD)
-        else:
-            self.process_token(DIV)
-
-        # We except the current token to be a single-digit integer
-        right_operand = self.current_token
-        self.process_token(INTEGER)
-
-        # after these above call the self.current_token is set to EOF token
-
-        # INTEGER OPERAND INTEGER sequence of tokens has been processed
-        # method can just now return the result of operation between two integers
-
-        if operator.type == PLUS:
-            res = left_operand.value + right_operand.value
-        elif operator.type == MINUS:
-            res = left_operand.value - right_operand.value
-        elif operator.type == PROD:
-            res = left_operand.value * right_operand.value
-        else:
-            if right_operand.value == 0:
-                raise ZeroDivisionError
-            else:
-                res = left_operand.value / right_operand.value
+        res = self.factor()
+        while self.current_token.type in (PLUS, MINUS, PROD, DIV):
+            token = self.current_token
+            if token.type == PLUS:
+                self.process_token(PLUS)
+                res += self.factor()
+            elif token.type == MINUS:
+                self.process_token(MINUS)
+                res -= self.factor()
+            elif token.type == PROD:
+                self.process_token(PROD)
+                res *= self.factor()
+            elif token.type == DIV:
+                self.process_token(DIV)
+                res /= self.factor()
         return res
 
 
@@ -148,7 +152,8 @@ def main():
             break
         if not user_input:
             continue
-        interpreter = Interpreter(user_input)
+        lexer = Lexer(user_input)
+        interpreter = Interpreter(lexer)
         result = interpreter.expr()
         print(result)
 

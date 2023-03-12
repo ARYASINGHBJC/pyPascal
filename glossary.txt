@@ -1,0 +1,12 @@
+Notation used for specifying the syntax of programming -> CFG
+A grammar consists of the sequence of rule, also known as productions.
+
+Tokens are terminal while variable like expressions are non-terminal.
+
+The non-terminal symbol on the left side of the first rule is called as start symbol.
+
+| --> OR. So (ADD | SUB) means either Add or Sub.
+(...) --> An opening and closing paranthesis means grouping
+of terminals and/or non-terminal as in (ADD | SUB)
+(...)* --> Match content within the group zero or more times.
+
