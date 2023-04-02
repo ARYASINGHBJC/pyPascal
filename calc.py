@@ -119,28 +119,36 @@ class Interpreter:
         self.process_token(INTEGER)
         return token.value
 
-    def expr(self):
+    def term(self):
         """
-          expression -> INTEGER PLUS INTEGER
-          expression -> INTEGER MINUS INTEGER
-          expression -> INTEGER PROD INTEGER
-          expression -> INTEGER DIV INTEGER
+        term: factor((mul | div) -> factor)
         """
         res = self.factor()
-        while self.current_token.type in (PLUS, MINUS, PROD, DIV):
+        while self.current_token.type in (PROD, DIV):
             token = self.current_token
-            if token.type == PLUS:
-                self.process_token(PLUS)
-                res += self.factor()
-            elif token.type == MINUS:
-                self.process_token(MINUS)
-                res -= self.factor()
-            elif token.type == PROD:
+            if token.type == PROD:
                 self.process_token(PROD)
                 res *= self.factor()
             elif token.type == DIV:
                 self.process_token(DIV)
                 res /= self.factor()
+        return res
+
+    def expr(self):
+        """
+            Arithmetic expression parser/interpreter
+            expr: term((PLUS | MINUS) term)*
+            term: factor((MUL | DIV) factor)*
+        """
+        res = self.term()
+        while self.current_token.type in (PLUS, MINUS):
+            token = self.current_token
+            if token.type == PLUS:
+                self.process_token(PLUS)
+                res += self.term()
+            elif token.type == MINUS:
+                self.process_token(MINUS)
+                res -= self.term()
         return res
 
 
